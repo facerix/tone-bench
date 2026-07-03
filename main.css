@@ -4,7 +4,22 @@
   /* Chrome-only for now but this will allow smooth size transitions */
   interpolate-size: allow-keywords;
 
-  --accent-color: #2ec6fe;
+  --accent-color: #ffb020;
+
+  /* TONEBENCH rack palette */
+  --bg-deep: #14110d;
+  --panel: #1e1a14;
+  --panel-raised: #262019;
+  --panel-line: #3a3226;
+  --amber: #ffb020;
+  --amber-dim: #7a5a1e;
+  --amber-glow: rgba(255, 176, 32, 0.35);
+  --green: #6dff8f;
+  --red: #ff5c4d;
+  --text: #e8ddc8;
+  --text-muted: #8a7f6c;
+  --font-display: 'Space Mono', monospace;
+  --font-body: 'IBM Plex Mono', monospace;
 }
 
 html {
@@ -22,10 +37,12 @@ body {
   flex-direction: column;
   padding: 0;
   margin: 0;
-  background-color: #f0f0f0;
-  color: #303030;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(255, 176, 32, 0.06), transparent 60%),
+    var(--bg-deep);
+  color: var(--text);
 
-  font-family: Futura, 'Trebuchet MS', Arial, sans-serif;
+  font-family: var(--font-body);
   font-style: normal;
   font-variant: normal;
 }
@@ -53,7 +70,8 @@ header {
 header#main-head {
   justify-content: space-between;
   padding: 0 8px;
-  border-bottom: 1px solid var(--accent-color);
+  border-bottom: 1px solid var(--panel-line);
+  background: var(--panel);
 }
 
 .header-identity {
@@ -61,7 +79,7 @@ header#main-head {
   color: inherit;
 
   h1 {
-    font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+    font-family: var(--font-display);
     font-size: 24px;
   }
 }
@@ -70,8 +88,11 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
-  font-variant: common-ligatures small-caps;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant: normal;
+  color: var(--text);
 }
 
 #main-head > * {
@@ -86,21 +107,25 @@ h4 {
 }
 
 #main-foot {
-  border-top: 1px solid var(--accent-color);
+  border-top: 1px solid var(--panel-line);
   justify-content: center;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
 }
 
 main {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 80vh;
+  min-height: 0;
   max-width: 100vw;
   overflow: hidden;
 
   padding: 8px;
   overflow-y: auto;
-  background-color: #fafafa;
+  background-color: var(--bg-deep);
 }
 
 .btn,
@@ -110,11 +135,17 @@ input[type='file']::file-selector-button {
   align-items: center;
   justify-content: center;
   gap: 0.5em;
-  padding: 0.25em 1em;
-  border-radius: 5px;
-  background: transparent;
+  padding: 0.5em 1em;
+  border-radius: 3px;
+  background: var(--panel-raised);
+  color: var(--text);
+  border: 1px solid var(--panel-line);
   cursor: pointer;
-  font-variant: common-ligatures small-caps;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant: normal;
   text-decoration: none;
 
   img {
@@ -133,8 +164,10 @@ input[type='file']::file-selector-button {
 
   &:not(:disabled):hover,
   &:not(:disabled):focus-visible {
-    outline: var(--accent-color) auto 1px;
-    background-color: #ddbfc67a;
+    outline: none;
+    border-color: var(--amber-dim);
+    color: var(--amber);
+    background-color: var(--panel-raised);
   }
 }
 
@@ -247,6 +280,233 @@ dialog::backdrop {
 @media (min-width: 992px) {
   header > img {
     display: block;
+  }
+}
+
+/* ---------- TONEBENCH rack layout ----------
+   These elements are light DOM (rendered by index.ts directly, not inside a
+   component's Shadow DOM), so they can't reach the panel/screw/module-label
+   rules in components/styles/panelChrome.ts — Shadow DOM styles don't cross
+   the shadow boundary. This is an intentional near-duplication of that file
+   for the handful of light-DOM elements (the presets panel + rack status);
+   every *component* still shares the one PANEL_CHROME_CSS constant. */
+
+.rack {
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 4px;
+  padding: 16px 18px;
+}
+.panel .screw {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #0000;
+  box-shadow:
+    inset 0 0 0 1px var(--panel-line),
+    inset 0 0 2px #000;
+}
+.panel .screw-tl {
+  top: 6px;
+  left: 6px;
+}
+.panel .screw-tr {
+  top: 6px;
+  right: 6px;
+}
+.panel .screw-bl {
+  bottom: 6px;
+  left: 6px;
+}
+.panel .screw-br {
+  bottom: 6px;
+  right: 6px;
+}
+
+.module-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.module-label .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber-glow);
+}
+
+.rack-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+}
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.brand-lockup img {
+  width: 42px;
+  height: 42px;
+}
+.brand-lockup h1 {
+  margin: 0;
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.brand-lockup h1 span {
+  color: var(--amber);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--panel-line);
+  box-shadow: inset 0 0 2px #000;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.led.on {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(109, 255, 143, 0.7);
+}
+
+.top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 14px;
+  align-items: stretch;
+}
+.top-grid.code-expanded {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+@media (max-width: 860px) {
+  .top-grid {
+    grid-template-columns: 1fr;
+  }
+  .top-grid.code-expanded {
+    grid-template-columns: 1fr;
+  }
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+@media (max-width: 980px) {
+  .controls-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mutate-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.btn.mutate {
+  color: var(--red);
+  border-color: #5a2a24;
+}
+.btn.mutate:hover {
+  border-color: var(--red);
+}
+
+.rack-footer {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  padding: 6px 0 2px;
+}
+.rack-footer a {
+  color: var(--text);
+  text-decoration: none;
+}
+.rack-footer a:hover,
+.rack-footer a:focus-visible {
+  color: var(--amber);
+  text-decoration: underline;
+}
+.rack-footer span {
+  display: inline-block;
+  margin: 0 8px;
+  color: var(--panel-line);
+}
+
+/* Custom elements default to `display: inline`; every TONEBENCH component
+   is a block-level layout participant (grid item, flex child, or full-width
+   field row). */
+range-field,
+wave-toggle,
+preset-row,
+source-panel,
+envelope-panel,
+filter-panel,
+space-panel,
+oscilloscope-panel,
+code-out-panel {
+  display: block;
+  min-width: 0;
+}
+code-out-panel {
+  height: 100%;
+}
+
+@media (max-width: 575px) {
+  .rack-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .brand-lockup img {
+    display: none;
+  }
+  .brand-lockup h1 {
+    font-size: 27px;
+  }
+  .status {
+    margin-left: 0;
   }
 }
 

@@ -22,7 +22,8 @@ For the full license text, see: https://www.gnu.org/licenses/gpl-3.0.txt
 
 ADDITIONAL TERMS:
 
-This template is provided as-is for creating Progressive Web Applications.
-Any applications built using this template must also be licensed under GPL-3.0
-or a compatible license, ensuring that derivative works remain free and open
-source.
+TONEBENCH is a procedural sound-effects synthesizer built on the Web Audio
+API. All synthesis runs locally in the browser — there are no samples, audio
+libraries, or external services involved. The core synthesis engine
+(src/engine/tonebenchEngine.ts) is intentionally self-contained and may be
+copied into other projects; such copies remain subject to this license.

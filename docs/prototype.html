@@ -1,0 +1,1454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TONEBENCH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-deep: #14110d;
+        --panel: #1e1a14;
+        --panel-raised: #262019;
+        --panel-line: #3a3226;
+        --amber: #ffb020;
+        --amber-dim: #7a5a1e;
+        --amber-glow: rgba(255, 176, 32, 0.35);
+        --green: #6dff8f;
+        --red: #ff5c4d;
+        --text: #e8ddc8;
+        --text-muted: #8a7f6c;
+        --font-display: 'Space Mono', monospace;
+        --font-body: 'IBM Plex Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        color: var(--text);
+      }
+      body {
+        font-family: var(--font-body);
+        background:
+          radial-gradient(1200px 600px at 20% -10%, rgba(255, 176, 32, 0.06), transparent 60%),
+          var(--bg-deep);
+        padding: 20px;
+        min-height: 100vh;
+      }
+      .rack {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* ---------- shared panel look ---------- */
+      .panel {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 4px;
+        padding: 16px 18px;
+      }
+      .panel::before,
+      .panel::after,
+      .panel .screw-tl,
+      .panel .screw-tr,
+      .panel .screw-bl,
+      .panel .screw-br {
+        content: '';
+        position: absolute;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #0000;
+        box-shadow:
+          inset 0 0 0 1px var(--panel-line),
+          inset 0 0 2px #000;
+      }
+      .panel .screw-tl {
+        top: 6px;
+        left: 6px;
+      }
+      .panel .screw-tr {
+        top: 6px;
+        right: 6px;
+      }
+      .panel .screw-bl {
+        bottom: 6px;
+        left: 6px;
+      }
+      .panel .screw-br {
+        bottom: 6px;
+        right: 6px;
+      }
+
+      .module-label {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        color: var(--amber);
+        text-transform: uppercase;
+        margin: 0 0 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .module-label .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--amber);
+        box-shadow: 0 0 6px var(--amber-glow);
+      }
+
+      /* ---------- header ---------- */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .header .brand {
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 22px;
+        letter-spacing: 0.06em;
+        color: var(--text);
+      }
+      .header .brand span {
+        color: var(--amber);
+      }
+      .header .sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        letter-spacing: 0.08em;
+        margin-top: 2px;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+      }
+      .led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #3a3226;
+        box-shadow: inset 0 0 2px #000;
+        transition:
+          background 0.15s,
+          box-shadow 0.15s;
+      }
+      .led.on {
+        background: var(--green);
+        box-shadow: 0 0 8px rgba(109, 255, 143, 0.7);
+      }
+
+      /* ---------- presets ---------- */
+      .preset-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .btn {
+        font-family: var(--font-display);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: var(--panel-raised);
+        color: var(--text);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        padding: 9px 12px;
+        cursor: pointer;
+        transition:
+          border-color 0.12s,
+          color 0.12s,
+          box-shadow 0.12s;
+      }
+      .btn:hover {
+        border-color: var(--amber-dim);
+        color: var(--amber);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn.mutate {
+        color: var(--red);
+        border-color: #5a2a24;
+      }
+      .btn.mutate:hover {
+        border-color: var(--red);
+      }
+
+      /* ---------- main grid: scope + code ---------- */
+      .top-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 860px) {
+        .top-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .scope-wrap {
+        background: #0d0b08;
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+      }
+      canvas#scope {
+        display: block;
+        width: 100%;
+        height: 170px;
+      }
+      .scope-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.025) 0px,
+          rgba(255, 255, 255, 0.025) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      }
+
+      .trigger-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        align-items: stretch;
+      }
+      .trigger-pad {
+        flex: 1;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 0.12em;
+        background: linear-gradient(180deg, #2a2116, #1c1710);
+        color: var(--amber);
+        border: 1px solid var(--amber-dim);
+        border-radius: 4px;
+        padding: 14px;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition:
+          box-shadow 0.08s,
+          transform 0.05s,
+          background 0.08s;
+      }
+      .trigger-pad:hover {
+        box-shadow: 0 0 16px var(--amber-glow);
+      }
+      .trigger-pad:active {
+        transform: translateY(1px);
+        background: #332616;
+      }
+      .trigger-pad.flash {
+        box-shadow:
+          0 0 26px var(--amber-glow),
+          inset 0 0 20px rgba(255, 176, 32, 0.25);
+      }
+      .btn-secondary {
+        font-family: var(--font-display);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        background: var(--panel-raised);
+        border: 1px solid var(--panel-line);
+        border-radius: 4px;
+        padding: 14px 16px;
+        cursor: pointer;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .btn-secondary:hover {
+        color: var(--text);
+        border-color: var(--amber-dim);
+      }
+
+      /* ---------- code panel ---------- */
+      .code-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .code-panel .module-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .code-scroll {
+        background: #0d0b08;
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        padding: 12px 14px;
+        font-size: 11.5px;
+        line-height: 1.6;
+        color: #cbd6c9;
+        overflow: auto;
+        max-height: 340px;
+        flex: 1;
+        white-space: pre;
+      }
+      .code-scroll .kw {
+        color: #ff9d6c;
+      }
+      .code-scroll .fn {
+        color: #7fd8ff;
+      }
+      .code-scroll .num {
+        color: var(--green);
+      }
+      .code-scroll .str {
+        color: #f0c674;
+      }
+      .code-scroll .com {
+        color: #5c5648;
+        font-style: italic;
+      }
+      .copy-btn {
+        font-family: var(--font-display);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+        background: none;
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        padding: 5px 9px;
+        cursor: pointer;
+        text-transform: uppercase;
+      }
+      .copy-btn:hover {
+        color: var(--amber);
+        border-color: var(--amber-dim);
+      }
+      .copy-btn.copied {
+        color: var(--green);
+        border-color: var(--green);
+      }
+
+      /* ---------- controls grid ---------- */
+      .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 980px) {
+        .controls-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 560px) {
+        .controls-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .field {
+        margin-bottom: 14px;
+      }
+      .field:last-child {
+        margin-bottom: 0;
+      }
+      .field-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 5px;
+      }
+      .field-label {
+        font-size: 10.5px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .field-value {
+        font-size: 11px;
+        color: var(--amber);
+        font-variant-numeric: tabular-nums;
+      }
+
+      input[type='range'] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--panel-line);
+        outline: none;
+        margin: 8px 0 2px;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--amber);
+        border: 2px solid #14110d;
+        box-shadow: 0 0 6px var(--amber-glow);
+        cursor: pointer;
+        margin-top: -1px;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--amber);
+        border: 2px solid #14110d;
+        box-shadow: 0 0 6px var(--amber-glow);
+        cursor: pointer;
+      }
+      input[type='range']:focus-visible::-webkit-slider-thumb {
+        outline: 2px solid var(--green);
+        outline-offset: 2px;
+      }
+
+      select {
+        width: 100%;
+        font-family: var(--font-body);
+        font-size: 12px;
+        background: var(--panel-raised);
+        color: var(--text);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        padding: 8px;
+        cursor: pointer;
+      }
+      select:focus-visible {
+        outline: 2px solid var(--green);
+      }
+
+      .wave-toggle {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .wave-btn {
+        font-family: var(--font-display);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 9px 4px;
+        background: var(--panel-raised);
+        color: var(--text-muted);
+        border: 1px solid var(--panel-line);
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .wave-btn.active {
+        color: var(--bg-deep);
+        background: var(--amber);
+        border-color: var(--amber);
+        font-weight: 700;
+      }
+      .wave-btn:hover:not(.active) {
+        color: var(--amber);
+        border-color: var(--amber-dim);
+      }
+
+      .duration-readout {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--panel-line);
+        font-size: 10.5px;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+      }
+      .duration-readout span {
+        color: var(--amber);
+      }
+
+      footer {
+        text-align: center;
+        font-size: 10.5px;
+        color: var(--text-muted);
+        letter-spacing: 0.06em;
+        padding: 6px 0 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .trigger-pad,
+        .led {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rack">
+      <!-- HEADER -->
+      <div class="panel header">
+        <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+        ><span class="screw-br"></span>
+        <div>
+          <div class="brand">TONE<span>BENCH</span></div>
+          <div class="sub">PROCEDURAL SFX SYNTHESIS &mdash; WEB AUDIO API</div>
+        </div>
+        <div class="status">
+          <div class="led" id="audioLed"></div>
+          <span id="audioStatus">CONTEXT SUSPENDED</span>
+        </div>
+      </div>
+
+      <!-- PRESETS -->
+      <div class="panel">
+        <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+        ><span class="screw-br"></span>
+        <div class="module-label"><span class="dot"></span>PRESETS</div>
+        <div class="preset-row" id="presetRow"></div>
+      </div>
+
+      <!-- SCOPE + CODE -->
+      <div class="top-grid">
+        <div class="panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label"><span class="dot"></span>OSCILLOSCOPE</div>
+          <div class="scope-wrap">
+            <canvas id="scope"></canvas>
+            <div class="scope-overlay"></div>
+          </div>
+          <div class="trigger-row">
+            <button class="trigger-pad" id="triggerBtn">&#9654; TRIGGER</button>
+            <button class="btn-secondary" id="exportBtn">EXPORT WAV</button>
+          </div>
+        </div>
+
+        <div class="panel code-panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label">
+            <span style="display: flex; align-items: center; gap: 8px"
+              ><span class="dot"></span>CODE OUT</span
+            >
+            <button class="copy-btn" id="copyBtn">COPY</button>
+          </div>
+          <div class="code-scroll" id="codeOut"></div>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="controls-grid">
+        <!-- SOURCE -->
+        <div class="panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label"><span class="dot"></span>SOURCE</div>
+          <div class="wave-toggle" id="waveToggle"></div>
+
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Start Freq</span
+              ><span class="field-value" id="v_freqStart">440 Hz</span>
+            </div>
+            <input type="range" id="freqStart" min="0" max="100" step="0.1" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">End Freq</span
+              ><span class="field-value" id="v_freqEnd">440 Hz</span>
+            </div>
+            <input type="range" id="freqEnd" min="0" max="100" step="0.1" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Volume</span
+              ><span class="field-value" id="v_volume">80%</span>
+            </div>
+            <input type="range" id="volume" min="0" max="1" step="0.01" />
+          </div>
+        </div>
+
+        <!-- ENVELOPE -->
+        <div class="panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label"><span class="dot"></span>ENVELOPE (ADSR)</div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Attack</span
+              ><span class="field-value" id="v_attack">0.010 s</span>
+            </div>
+            <input type="range" id="attack" min="0" max="1" step="0.001" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Decay</span
+              ><span class="field-value" id="v_decay">0.100 s</span>
+            </div>
+            <input type="range" id="decay" min="0" max="1" step="0.001" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Sustain Level</span
+              ><span class="field-value" id="v_sustainLevel">60%</span>
+            </div>
+            <input type="range" id="sustainLevel" min="0" max="1" step="0.01" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Sustain Time</span
+              ><span class="field-value" id="v_sustainTime">0.050 s</span>
+            </div>
+            <input type="range" id="sustainTime" min="0" max="1" step="0.001" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Release</span
+              ><span class="field-value" id="v_release">0.200 s</span>
+            </div>
+            <input type="range" id="release" min="0" max="2" step="0.001" />
+          </div>
+          <div class="duration-readout">TOTAL DURATION <span id="v_duration">0.360 s</span></div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label"><span class="dot"></span>FILTER</div>
+          <div class="field">
+            <div class="field-row"><span class="field-label">Type</span></div>
+            <select id="filterType">
+              <option value="none">None (bypass)</option>
+              <option value="lowpass" selected>Lowpass</option>
+              <option value="highpass">Highpass</option>
+              <option value="bandpass">Bandpass</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Cutoff</span
+              ><span class="field-value" id="v_filterCutoff">2000 Hz</span>
+            </div>
+            <input type="range" id="filterCutoff" min="0" max="100" step="0.1" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Resonance (Q)</span
+              ><span class="field-value" id="v_filterQ">1.0</span>
+            </div>
+            <input type="range" id="filterQ" min="0.1" max="20" step="0.1" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Distortion</span
+              ><span class="field-value" id="v_distortion">0%</span>
+            </div>
+            <input type="range" id="distortion" min="0" max="100" step="1" />
+          </div>
+        </div>
+
+        <!-- SPACE -->
+        <div class="panel">
+          <span class="screw-tl"></span><span class="screw-tr"></span><span class="screw-bl"></span
+          ><span class="screw-br"></span>
+          <div class="module-label"><span class="dot"></span>SPACE</div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Reverb Decay</span
+              ><span class="field-value" id="v_reverbDecay">1.50 s</span>
+            </div>
+            <input type="range" id="reverbDecay" min="0.1" max="4" step="0.05" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Reverb Mix</span
+              ><span class="field-value" id="v_reverbMix">0%</span>
+            </div>
+            <input type="range" id="reverbMix" min="0" max="1" step="0.01" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Delay Time</span
+              ><span class="field-value" id="v_delayTime">0.200 s</span>
+            </div>
+            <input type="range" id="delayTime" min="0" max="1" step="0.005" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Delay Feedback</span
+              ><span class="field-value" id="v_delayFeedback">30%</span>
+            </div>
+            <input type="range" id="delayFeedback" min="0" max="0.9" step="0.01" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <span class="field-label">Delay Mix</span
+              ><span class="field-value" id="v_delayMix">0%</span>
+            </div>
+            <input type="range" id="delayMix" min="0" max="1" step="0.01" />
+          </div>
+        </div>
+      </div>
+
+      <div class="preset-row" style="justify-content: flex-end">
+        <button class="btn mutate" id="mutateBtn">&#9860; MUTATE</button>
+      </div>
+
+      <footer>
+        ALL SYNTHESIS RUNS LOCALLY VIA THE WEB AUDIO API &mdash; NO SAMPLES, NO LIBRARIES
+      </footer>
+    </div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        /* ============================================================
+     1. THE PORTABLE AUDIO ENGINE
+     This exact function (as text) is what gets shown in the
+     code panel AND what actually runs the live preview /
+     WAV export, so what you hear is always what you copy.
+  ============================================================ */
+        const playSoundSource = [
+          'function playSound(ctx, p, when, destination) {',
+          '  when = when || ctx.currentTime;',
+          '  destination = destination || ctx.destination;',
+          '  const duration = p.attack + p.decay + p.sustainTime + p.release;',
+          '',
+          '  const master = ctx.createGain();',
+          '  master.gain.value = p.volume;',
+          '',
+          '  // --- sound source: oscillator or white noise buffer ---',
+          '  let source;',
+          "  if (p.waveType === 'noise') {",
+          '    const len = Math.max(1, Math.ceil(ctx.sampleRate * duration));',
+          '    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);',
+          '    const data = buffer.getChannelData(0);',
+          '    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;',
+          '    source = ctx.createBufferSource();',
+          '    source.buffer = buffer;',
+          '  } else {',
+          '    source = ctx.createOscillator();',
+          '    source.type = p.waveType;',
+          '    source.frequency.setValueAtTime(p.freqStart, when);',
+          '    source.frequency.exponentialRampToValueAtTime(Math.max(p.freqEnd, 1), when + duration);',
+          '  }',
+          '',
+          '  // --- ADSR amplitude envelope ---',
+          '  const env = ctx.createGain();',
+          '  env.gain.setValueAtTime(0, when);',
+          '  env.gain.linearRampToValueAtTime(1, when + p.attack);',
+          '  env.gain.linearRampToValueAtTime(p.sustainLevel, when + p.attack + p.decay);',
+          '  env.gain.setValueAtTime(p.sustainLevel, when + p.attack + p.decay + p.sustainTime);',
+          '  env.gain.linearRampToValueAtTime(0.0001, when + duration);',
+          '',
+          '  let node = source;',
+          '  node.connect(env);',
+          '  node = env;',
+          '',
+          '  // --- optional filter ---',
+          "  if (p.filterType !== 'none') {",
+          '    const filter = ctx.createBiquadFilter();',
+          '    filter.type = p.filterType;',
+          '    filter.frequency.value = p.filterCutoff;',
+          '    filter.Q.value = p.filterQ;',
+          '    node.connect(filter);',
+          '    node = filter;',
+          '  }',
+          '',
+          '  // --- optional waveshaper distortion ---',
+          '  if (p.distortion > 0) {',
+          '    const shaper = ctx.createWaveShaper();',
+          '    const k = p.distortion * 2;',
+          '    const n = 44100;',
+          '    const curve = new Float32Array(n);',
+          '    for (let i = 0; i < n; i++) {',
+          '      const x = (i * 2) / n - 1;',
+          '      curve[i] = ((3 + k) * x * 20 * (Math.PI / 180)) / (Math.PI + k * Math.abs(x));',
+          '    }',
+          '    shaper.curve = curve;',
+          "    shaper.oversample = '4x';",
+          '    node.connect(shaper);',
+          '    node = shaper;',
+          '  }',
+          '',
+          '  node.connect(master);',
+          '  master.connect(destination);',
+          '',
+          '  // --- optional delay (synthesized, no IR file) ---',
+          '  if (p.delayMix > 0) {',
+          '    const delay = ctx.createDelay(1);',
+          '    delay.delayTime.value = p.delayTime;',
+          '    const feedback = ctx.createGain();',
+          '    feedback.gain.value = p.delayFeedback;',
+          '    const delayWet = ctx.createGain();',
+          '    delayWet.gain.value = p.delayMix;',
+          '    master.connect(delay);',
+          '    delay.connect(feedback);',
+          '    feedback.connect(delay);',
+          '    delay.connect(delayWet);',
+          '    delayWet.connect(destination);',
+          '  }',
+          '',
+          '  // --- optional reverb (procedurally generated impulse response) ---',
+          '  if (p.reverbMix > 0) {',
+          '    const convolver = ctx.createConvolver();',
+          '    const len = Math.floor(ctx.sampleRate * p.reverbDecay);',
+          '    const impulse = ctx.createBuffer(2, len, ctx.sampleRate);',
+          '    for (let ch = 0; ch < 2; ch++) {',
+          '      const data = impulse.getChannelData(ch);',
+          '      for (let i = 0; i < len; i++) {',
+          '        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);',
+          '      }',
+          '    }',
+          '    convolver.buffer = impulse;',
+          '    const reverbWet = ctx.createGain();',
+          '    reverbWet.gain.value = p.reverbMix;',
+          '    master.connect(convolver);',
+          '    convolver.connect(reverbWet);',
+          '    reverbWet.connect(destination);',
+          '  }',
+          '',
+          '  source.start(when);',
+          '  source.stop(when + duration + 0.1);',
+          '  return { source: source, duration: duration };',
+          '}',
+        ].join('\n');
+
+        // eslint-disable-next-line no-new-func
+        const playSound = new Function('return (' + playSoundSource + ')')();
+
+        /* ============================================================
+     2. STATE
+  ============================================================ */
+        const FREQ_MIN = 20,
+          FREQ_MAX = 4000;
+        const CUTOFF_MIN = 40,
+          CUTOFF_MAX = 14000;
+
+        function sliderToFreq(v, min, max) {
+          return min * Math.pow(max / min, v / 100);
+        }
+        function freqToSlider(f, min, max) {
+          return (100 * Math.log(f / min)) / Math.log(max / min);
+        }
+
+        const WAVE_TYPES = ['sine', 'square', 'sawtooth', 'triangle', 'noise'];
+
+        const params = {
+          waveType: 'square',
+          freqStart: 440,
+          freqEnd: 440,
+          attack: 0.01,
+          decay: 0.1,
+          sustainLevel: 0.6,
+          sustainTime: 0.05,
+          release: 0.2,
+          filterType: 'lowpass',
+          filterCutoff: 2000,
+          filterQ: 1.0,
+          distortion: 0,
+          delayTime: 0.2,
+          delayFeedback: 0.3,
+          delayMix: 0,
+          reverbDecay: 1.5,
+          reverbMix: 0,
+          volume: 0.8,
+        };
+
+        const PRESETS = {
+          LASER: {
+            waveType: 'sawtooth',
+            freqStart: 1800,
+            freqEnd: 220,
+            attack: 0.001,
+            decay: 0.05,
+            sustainLevel: 0.3,
+            sustainTime: 0.05,
+            release: 0.05,
+            filterType: 'lowpass',
+            filterCutoff: 4000,
+            filterQ: 5,
+            distortion: 10,
+            delayTime: 0.15,
+            delayFeedback: 0.2,
+            delayMix: 0,
+            reverbDecay: 0.5,
+            reverbMix: 0.1,
+            volume: 0.7,
+          },
+          EXPLOSION: {
+            waveType: 'noise',
+            freqStart: 100,
+            freqEnd: 100,
+            attack: 0.001,
+            decay: 0.3,
+            sustainLevel: 0.2,
+            sustainTime: 0.1,
+            release: 0.6,
+            filterType: 'lowpass',
+            filterCutoff: 800,
+            filterQ: 1,
+            distortion: 30,
+            delayTime: 0.1,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 2.2,
+            reverbMix: 0.35,
+            volume: 0.9,
+          },
+          JUMP: {
+            waveType: 'square',
+            freqStart: 300,
+            freqEnd: 700,
+            attack: 0.001,
+            decay: 0.08,
+            sustainLevel: 0.4,
+            sustainTime: 0.02,
+            release: 0.1,
+            filterType: 'lowpass',
+            filterCutoff: 5000,
+            filterQ: 2,
+            distortion: 0,
+            delayTime: 0.15,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 0.4,
+            reverbMix: 0.05,
+            volume: 0.7,
+          },
+          COIN: {
+            waveType: 'square',
+            freqStart: 900,
+            freqEnd: 1500,
+            attack: 0.001,
+            decay: 0.04,
+            sustainLevel: 0.5,
+            sustainTime: 0.06,
+            release: 0.12,
+            filterType: 'none',
+            filterCutoff: 4000,
+            filterQ: 1,
+            distortion: 0,
+            delayTime: 0.1,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 0.8,
+            reverbMix: 0.15,
+            volume: 0.6,
+          },
+          HIT: {
+            waveType: 'sawtooth',
+            freqStart: 220,
+            freqEnd: 60,
+            attack: 0.001,
+            decay: 0.05,
+            sustainLevel: 0.3,
+            sustainTime: 0.02,
+            release: 0.1,
+            filterType: 'lowpass',
+            filterCutoff: 1200,
+            filterQ: 3,
+            distortion: 40,
+            delayTime: 0.1,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 0.6,
+            reverbMix: 0.05,
+            volume: 0.8,
+          },
+          POWERUP: {
+            waveType: 'square',
+            freqStart: 300,
+            freqEnd: 1200,
+            attack: 0.01,
+            decay: 0.15,
+            sustainLevel: 0.6,
+            sustainTime: 0.2,
+            release: 0.25,
+            filterType: 'lowpass',
+            filterCutoff: 6000,
+            filterQ: 1,
+            distortion: 0,
+            delayTime: 0.15,
+            delayFeedback: 0.2,
+            delayMix: 0.1,
+            reverbDecay: 1.2,
+            reverbMix: 0.2,
+            volume: 0.7,
+          },
+          'UI CLICK': {
+            waveType: 'sine',
+            freqStart: 1200,
+            freqEnd: 900,
+            attack: 0.001,
+            decay: 0.02,
+            sustainLevel: 0.2,
+            sustainTime: 0.01,
+            release: 0.03,
+            filterType: 'none',
+            filterCutoff: 4000,
+            filterQ: 1,
+            distortion: 0,
+            delayTime: 0.1,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 0.5,
+            reverbMix: 0,
+            volume: 0.5,
+          },
+          ALARM: {
+            waveType: 'square',
+            freqStart: 600,
+            freqEnd: 900,
+            attack: 0.05,
+            decay: 0.05,
+            sustainLevel: 0.8,
+            sustainTime: 0.3,
+            release: 0.2,
+            filterType: 'bandpass',
+            filterCutoff: 800,
+            filterQ: 8,
+            distortion: 5,
+            delayTime: 0.1,
+            delayFeedback: 0.1,
+            delayMix: 0,
+            reverbDecay: 0.8,
+            reverbMix: 0.1,
+            volume: 0.8,
+          },
+        };
+
+        /* ============================================================
+     3. AUDIO CONTEXT + SCOPE
+  ============================================================ */
+        let ctx = null;
+        let analyser = null;
+        let analyserOutGain = null; // analyser -> destination passthrough
+
+        function ensureContext() {
+          if (ctx) return ctx;
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = ctx.createAnalyser();
+          analyser.fftSize = 2048;
+          analyserOutGain = ctx.createGain();
+          analyserOutGain.gain.value = 1;
+          analyser.connect(analyserOutGain);
+          analyserOutGain.connect(ctx.destination);
+          updateAudioStatus();
+          ctx.onstatechange = updateAudioStatus;
+          return ctx;
+        }
+
+        function updateAudioStatus() {
+          const led = document.getElementById('audioLed');
+          const label = document.getElementById('audioStatus');
+          if (!ctx) {
+            led.classList.remove('on');
+            label.textContent = 'CONTEXT SUSPENDED';
+            return;
+          }
+          if (ctx.state === 'running') {
+            led.classList.add('on');
+            label.textContent = 'CONTEXT RUNNING';
+          } else {
+            led.classList.remove('on');
+            label.textContent = 'CONTEXT ' + ctx.state.toUpperCase();
+          }
+        }
+
+        function trigger() {
+          ensureContext();
+          if (ctx.state === 'suspended') ctx.resume();
+          // route this hit's output through the analyser tap so the scope reacts
+          playSound(ctx, params, ctx.currentTime, analyser);
+          flashPad();
+        }
+
+        function flashPad() {
+          const pad = document.getElementById('triggerBtn');
+          pad.classList.add('flash');
+          setTimeout(() => pad.classList.remove('flash'), 150);
+        }
+
+        /* ---- oscilloscope draw loop ---- */
+        const canvas = document.getElementById('scope');
+        const scopeCtx2d = canvas.getContext('2d');
+        let dataArray = new Uint8Array(2048);
+
+        function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+          scopeCtx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawScope() {
+          requestAnimationFrame(drawScope);
+          const w = canvas.getBoundingClientRect().width;
+          const h = canvas.getBoundingClientRect().height;
+          scopeCtx2d.clearRect(0, 0, w, h);
+
+          // baseline grid
+          scopeCtx2d.strokeStyle = 'rgba(255,176,32,0.08)';
+          scopeCtx2d.lineWidth = 1;
+          scopeCtx2d.beginPath();
+          scopeCtx2d.moveTo(0, h / 2);
+          scopeCtx2d.lineTo(w, h / 2);
+          scopeCtx2d.stroke();
+
+          if (analyser) {
+            analyser.getByteTimeDomainData(dataArray);
+            scopeCtx2d.strokeStyle = '#ffb020';
+            scopeCtx2d.lineWidth = 1.6;
+            scopeCtx2d.shadowColor = 'rgba(255,176,32,0.6)';
+            scopeCtx2d.shadowBlur = 6;
+            scopeCtx2d.beginPath();
+            const sliceWidth = w / dataArray.length;
+            let x = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              const v = dataArray[i] / 128.0;
+              const y = (v * h) / 2;
+              if (i === 0) scopeCtx2d.moveTo(x, y);
+              else scopeCtx2d.lineTo(x, y);
+              x += sliceWidth;
+            }
+            scopeCtx2d.stroke();
+            scopeCtx2d.shadowBlur = 0;
+          }
+        }
+
+        /* ============================================================
+     4. WAV EXPORT
+  ============================================================ */
+        function bufferToWav(buffer) {
+          const numChannels = buffer.numberOfChannels;
+          const sampleRate = buffer.sampleRate;
+          const bitDepth = 16;
+          const bytesPerSample = bitDepth / 8;
+          const blockAlign = numChannels * bytesPerSample;
+          const numSamples = buffer.length;
+          const dataSize = numSamples * blockAlign;
+          const arr = new ArrayBuffer(44 + dataSize);
+          const view = new DataView(arr);
+
+          function writeStr(offset, str) {
+            for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+          }
+          writeStr(0, 'RIFF');
+          view.setUint32(4, 36 + dataSize, true);
+          writeStr(8, 'WAVE');
+          writeStr(12, 'fmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, numChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, sampleRate * blockAlign, true);
+          view.setUint16(32, blockAlign, true);
+          view.setUint16(34, bitDepth, true);
+          writeStr(36, 'data');
+          view.setUint32(40, dataSize, true);
+
+          let offset = 44;
+          const channels = [];
+          for (let ch = 0; ch < numChannels; ch++) channels.push(buffer.getChannelData(ch));
+          for (let i = 0; i < numSamples; i++) {
+            for (let ch = 0; ch < numChannels; ch++) {
+              let sample = Math.max(-1, Math.min(1, channels[ch][i]));
+              sample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+              view.setInt16(offset, sample, true);
+              offset += 2;
+            }
+          }
+          return arr;
+        }
+
+        async function exportWav() {
+          const duration = params.attack + params.decay + params.sustainTime + params.release;
+          const tail =
+            Math.max(
+              params.reverbMix > 0 ? params.reverbDecay : 0,
+              params.delayMix > 0 ? params.delayTime * 4 : 0
+            ) + 0.3;
+          const totalLen = Math.ceil((duration + tail) * 44100);
+          const offlineCtx = new OfflineAudioContext(2, totalLen, 44100);
+          playSound(offlineCtx, params, 0, offlineCtx.destination);
+          const rendered = await offlineCtx.startRendering();
+          const wavData = bufferToWav(rendered);
+          const blob = new Blob([wavData], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'tonebench-' + Date.now() + '.wav';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        /* ============================================================
+     5. UI WIRING
+  ============================================================ */
+        const el = id => document.getElementById(id);
+
+        function fmt(n, decimals) {
+          return Number(n).toFixed(decimals);
+        }
+
+        function refreshReadouts() {
+          el('v_freqStart').textContent = Math.round(params.freqStart) + ' Hz';
+          el('v_freqEnd').textContent = Math.round(params.freqEnd) + ' Hz';
+          el('v_volume').textContent = Math.round(params.volume * 100) + '%';
+          el('v_attack').textContent = fmt(params.attack, 3) + ' s';
+          el('v_decay').textContent = fmt(params.decay, 3) + ' s';
+          el('v_sustainLevel').textContent = Math.round(params.sustainLevel * 100) + '%';
+          el('v_sustainTime').textContent = fmt(params.sustainTime, 3) + ' s';
+          el('v_release').textContent = fmt(params.release, 3) + ' s';
+          el('v_filterCutoff').textContent = Math.round(params.filterCutoff) + ' Hz';
+          el('v_filterQ').textContent = fmt(params.filterQ, 1);
+          el('v_distortion').textContent = Math.round(params.distortion) + '%';
+          el('v_reverbDecay').textContent = fmt(params.reverbDecay, 2) + ' s';
+          el('v_reverbMix').textContent = Math.round(params.reverbMix * 100) + '%';
+          el('v_delayTime').textContent = fmt(params.delayTime, 3) + ' s';
+          el('v_delayFeedback').textContent = Math.round(params.delayFeedback * 100) + '%';
+          el('v_delayMix').textContent = Math.round(params.delayMix * 100) + '%';
+          const dur = params.attack + params.decay + params.sustainTime + params.release;
+          el('v_duration').textContent = fmt(dur, 3) + ' s';
+        }
+
+        function syncControlsFromParams() {
+          el('freqStart').value = freqToSlider(params.freqStart, FREQ_MIN, FREQ_MAX);
+          el('freqEnd').value = freqToSlider(params.freqEnd, FREQ_MIN, FREQ_MAX);
+          el('volume').value = params.volume;
+          el('attack').value = params.attack;
+          el('decay').value = params.decay;
+          el('sustainLevel').value = params.sustainLevel;
+          el('sustainTime').value = params.sustainTime;
+          el('release').value = params.release;
+          el('filterType').value = params.filterType;
+          el('filterCutoff').value = freqToSlider(params.filterCutoff, CUTOFF_MIN, CUTOFF_MAX);
+          el('filterQ').value = params.filterQ;
+          el('distortion').value = params.distortion;
+          el('reverbDecay').value = params.reverbDecay;
+          el('reverbMix').value = params.reverbMix;
+          el('delayTime').value = params.delayTime;
+          el('delayFeedback').value = params.delayFeedback;
+          el('delayMix').value = params.delayMix;
+          document.querySelectorAll('.wave-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.wave === params.waveType);
+          });
+          refreshReadouts();
+          refreshCode();
+        }
+
+        function buildWaveToggle() {
+          const wrap = el('waveToggle');
+          WAVE_TYPES.forEach(w => {
+            const b = document.createElement('button');
+            b.className = 'wave-btn' + (w === params.waveType ? ' active' : '');
+            b.dataset.wave = w;
+            b.textContent = w;
+            b.addEventListener('click', () => {
+              params.waveType = w;
+              document.querySelectorAll('.wave-btn').forEach(x => x.classList.remove('active'));
+              b.classList.add('active');
+              refreshCode();
+              trigger();
+            });
+            wrap.appendChild(b);
+          });
+        }
+
+        function buildPresets() {
+          const row = el('presetRow');
+          Object.keys(PRESETS).forEach(name => {
+            const b = document.createElement('button');
+            b.className = 'btn';
+            b.textContent = name;
+            b.addEventListener('click', () => {
+              Object.assign(params, PRESETS[name]);
+              syncControlsFromParams();
+              trigger();
+            });
+            row.appendChild(b);
+          });
+        }
+
+        function bindSlider(id, key, transform, liveOnly) {
+          const input = el(id);
+          const handler = commit => {
+            const raw = parseFloat(input.value);
+            params[key] = transform ? transform(raw) : raw;
+            refreshReadouts();
+            refreshCode();
+            if (commit) trigger();
+          };
+          input.addEventListener('input', () => handler(false));
+          input.addEventListener('change', () => handler(true));
+        }
+
+        function bindSelect(id, key) {
+          const input = el(id);
+          input.addEventListener('change', () => {
+            params[key] = input.value;
+            refreshCode();
+            trigger();
+          });
+        }
+
+        function escapeHtml(s) {
+          return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function highlightJs(src) {
+          let out = escapeHtml(src);
+          out = out.replace(/(\/\/.*$)/gm, '<span class="com">$1</span>');
+          out = out.replace(
+            /\b(function|const|let|var|if|else|for|return|new)\b/g,
+            '<span class="kw">$1</span>'
+          );
+          out = out.replace(
+            /\b(ctx|createGain|createOscillator|createBiquadFilter|createBufferSource|createBuffer|createWaveShaper|createDelay|createConvolver|connect|start|stop|setValueAtTime|linearRampToValueAtTime|exponentialRampToValueAtTime)\b(?=\()/g,
+            '<span class="fn">$1</span>'
+          );
+          out = out.replace(/(&#39;[^&]*?&#39;|'[^']*')/g, '<span class="str">$1</span>');
+          out = out.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+          return out;
+        }
+
+        function refreshCode() {
+          const paramsJson = JSON.stringify(params, null, 2);
+          const snippet =
+            '// 1. Paste this function once \u2014 it builds the whole signal chain.\n' +
+            playSoundSource +
+            '\n\n' +
+            '// 2. This object is your current TONEBENCH settings.\n' +
+            'const params = ' +
+            paramsJson +
+            ';\n\n' +
+            '// 3. Play it through any AudioContext.\n' +
+            'const audioCtx = new AudioContext();\n' +
+            'playSound(audioCtx, params);';
+          el('codeOut').innerHTML = highlightJs(snippet);
+        }
+
+        function copyCode() {
+          const text = el('codeOut').textContent;
+          const btn = el('copyBtn');
+          const done = () => {
+            btn.textContent = 'COPIED';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = 'COPY';
+              btn.classList.remove('copied');
+            }, 1400);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .then(done)
+              .catch(() => fallbackCopy(text, done));
+          } else {
+            fallbackCopy(text, done);
+          }
+        }
+
+        function fallbackCopy(text, done) {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try {
+            document.execCommand('copy');
+            done();
+          } catch (e) {
+            /* no-op */
+          }
+          document.body.removeChild(ta);
+        }
+
+        function mutate() {
+          const jitter = (v, min, max, amt) => {
+            const range = max - min;
+            let nv = v + (Math.random() * 2 - 1) * range * amt;
+            return Math.max(min, Math.min(max, nv));
+          };
+          params.waveType = WAVE_TYPES[Math.floor(Math.random() * WAVE_TYPES.length)];
+          params.freqStart = jitter(params.freqStart, FREQ_MIN, FREQ_MAX, 0.4);
+          params.freqEnd = jitter(params.freqEnd, FREQ_MIN, FREQ_MAX, 0.4);
+          params.attack = jitter(params.attack, 0, 1, 0.3);
+          params.decay = jitter(params.decay, 0, 1, 0.3);
+          params.sustainLevel = jitter(params.sustainLevel, 0, 1, 0.3);
+          params.sustainTime = jitter(params.sustainTime, 0, 1, 0.3);
+          params.release = jitter(params.release, 0, 2, 0.3);
+          params.filterCutoff = jitter(params.filterCutoff, CUTOFF_MIN, CUTOFF_MAX, 0.4);
+          params.filterQ = jitter(params.filterQ, 0.1, 20, 0.3);
+          params.distortion = jitter(params.distortion, 0, 100, 0.4);
+          params.reverbMix = jitter(params.reverbMix, 0, 1, 0.3);
+          params.delayMix = jitter(params.delayMix, 0, 1, 0.3);
+          syncControlsFromParams();
+          trigger();
+        }
+
+        /* ============================================================
+     6. INIT
+  ============================================================ */
+        buildWaveToggle();
+        buildPresets();
+
+        bindSlider('freqStart', 'freqStart', v => sliderToFreq(v, FREQ_MIN, FREQ_MAX));
+        bindSlider('freqEnd', 'freqEnd', v => sliderToFreq(v, FREQ_MIN, FREQ_MAX));
+        bindSlider('volume', 'volume');
+        bindSlider('attack', 'attack');
+        bindSlider('decay', 'decay');
+        bindSlider('sustainLevel', 'sustainLevel');
+        bindSlider('sustainTime', 'sustainTime');
+        bindSlider('release', 'release');
+        bindSlider('filterCutoff', 'filterCutoff', v => sliderToFreq(v, CUTOFF_MIN, CUTOFF_MAX));
+        bindSlider('filterQ', 'filterQ');
+        bindSlider('distortion', 'distortion');
+        bindSlider('reverbDecay', 'reverbDecay');
+        bindSlider('reverbMix', 'reverbMix');
+        bindSlider('delayTime', 'delayTime');
+        bindSlider('delayFeedback', 'delayFeedback');
+        bindSlider('delayMix', 'delayMix');
+        bindSelect('filterType', 'filterType');
+
+        el('triggerBtn').addEventListener('click', trigger);
+        el('exportBtn').addEventListener('click', () => {
+          ensureContext();
+          exportWav();
+        });
+        el('copyBtn').addEventListener('click', copyCode);
+        el('mutateBtn').addEventListener('click', mutate);
+
+        syncControlsFromParams();
+        resizeCanvas();
+        drawScope();
+      })();
+    </script>
+  </body>
+</html>

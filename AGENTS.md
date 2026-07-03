@@ -2,6 +2,17 @@
 
 Agent-specific guidance. See [README.md](README.md) for project overview, architecture, and coding standards.
 
+## Domain: TONEBENCH
+
+TONEBENCH is a procedural SFX synthesizer. A "sound" is a flat, serializable `SynthParams` object (wave type, frequency sweep, ADSR, filter, distortion, delay, reverb, volume) — see `src/engine/tonebenchEngine.ts`. Key rules:
+
+- ADSR is time-bounded (`duration = attack + decay + sustainTime + release`), not a held-note model.
+- Frequency/cutoff sliders map through `sliderToFreq`/`freqToSlider` — the mapping is logarithmic, not linear.
+- `src/engine/tonebenchEngine.ts` is a **vendored library**: zero imports from `DataStore.ts`, `domUtils.ts`, or `/components/`, touches only `BaseAudioContext` and standard globals. Never add app-specific imports to it.
+- Built-in presets (`src/presets.ts`) are fixed/hardcoded. User-created **sound sets** are persisted via `DataStore` (`SoundSet { id, name, presets: SoundSetPreset[] }`). To edit one preset inside a set, clone the record via `getItemById`, mutate its `presets` array, call `updateItem` — don't add new `DataStore` methods for this.
+
+See `CLAUDE.md` for the fuller domain writeup.
+
 ## TypeScript
 
 The project is TypeScript, compiled with `tsc` (no bundler) to `dist/`. `live-server` serves `dist/` as the web root in dev. Key conventions:
@@ -127,7 +138,7 @@ UpdateNotification (dispatched by component)
 
 Run `pnpm test` (typecheck + `node --test`). Tests live in `tests/`, import source with relative paths and the `.ts` extension, and run directly under Node 24's built-in type stripping (no compile step).
 
-For manual UI testing: use @Browser at `http://localhost:8080` (assume `pnpm dev` is already running). Verify UI, interactions, console, service worker.
+For manual UI testing: use @Browser at `http://localhost:8082` (assume `pnpm dev` is already running). Verify UI, interactions, console, service worker.
 
 ## Checklist
 

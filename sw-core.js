@@ -7,7 +7,7 @@
  * Creates cache configuration from a version string and provides shared resource lists
  */
 const CacheConfig = {
-  create(version, prefix = 'app-cache-') {
+  create(version, prefix = 'tonebench-cache-') {
     return {
       version,
       name: `${prefix}v${version}`,

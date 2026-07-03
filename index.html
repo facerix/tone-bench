@@ -2,15 +2,21 @@
 
 <html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <title>App Name</title>
+    <title>TONEBENCH</title>
     <meta charset="utf-8" />
-    <meta name="description" content="A simple web app" />
+    <meta
+      name="description"
+      content="Procedural SFX synthesis tool — design and export game/UI sound effects with the Web Audio API"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="canonical" href="https://example.facerix.com/" />
-    <meta property="og:title" content="App Name" />
-    <meta property="og:description" content="A simple web app" />
-    <meta property="og:url" content="https://example.facerix.com/" />
+    <meta name="theme-color" content="#ffb020" />
+    <link rel="canonical" href="https://tonebench.facerix.com/" />
+    <meta property="og:title" content="TONEBENCH" />
+    <meta
+      property="og:description"
+      content="Procedural SFX synthesis tool — design and export game/UI sound effects with the Web Audio API"
+    />
+    <meta property="og:url" content="https://tonebench.facerix.com/" />
     <meta property="og:type" content="website" />
     <meta http-equiv="Content-Language" content="en" />
 
@@ -18,21 +24,63 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
     <link rel="stylesheet" href="/main.css" type="text/css" charset="utf-8" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="modulepreload" href="/index.js" />
   </head>
 
   <body class="u-fill-height">
-    <header>
-      <img src="/favicon.svg" alt="App logo" />
-      <h1>App Name</h1>
-    </header>
-    <main class="u-center">
-      <h3>Welcome to your new app</h3>
-    </main>
+    <main>
+      <div class="rack" id="rack">
+        <div class="panel rack-header">
+          <span class="screw screw-tl"></span><span class="screw screw-tr"></span
+          ><span class="screw screw-bl"></span><span class="screw screw-br"></span>
+          <div class="brand-lockup">
+            <img src="/favicon.svg" alt="TONEBENCH logo" />
+            <h1>TONE<span>BENCH</span></h1>
+          </div>
+          <div class="status">
+            <div class="led" id="audioLed"></div>
+            <span id="audioStatus">CONTEXT SUSPENDED</span>
+          </div>
+        </div>
 
-    <footer id="main-foot">A&nbsp;<a href="/about.html">Facerix</a>&nbsp;creation</footer>
+        <div class="panel">
+          <span class="screw screw-tl"></span><span class="screw screw-tr"></span
+          ><span class="screw screw-bl"></span><span class="screw screw-br"></span>
+          <div class="module-label"><span class="dot"></span>PRESETS</div>
+          <preset-row></preset-row>
+        </div>
+
+        <div class="top-grid">
+          <oscilloscope-panel id="scope"></oscilloscope-panel>
+          <code-out-panel id="codeOut"></code-out-panel>
+        </div>
+
+        <div class="controls-grid">
+          <source-panel></source-panel>
+          <envelope-panel></envelope-panel>
+          <filter-panel></filter-panel>
+          <space-panel></space-panel>
+        </div>
+
+        <div class="mutate-row">
+          <button class="btn mutate" id="mutateBtn" type="button">&#9860; MUTATE</button>
+        </div>
+
+        <div class="rack-footer">
+          ALL SYNTHESIS RUNS LOCALLY VIA THE WEB AUDIO API &mdash; NO SAMPLES, NO LIBRARIES
+          <span aria-hidden="true">/</span>
+          A <a href="/about.html">FACERIX</a> CREATION
+        </div>
+      </div>
+    </main>
 
     <update-notification></update-notification>
   </body>

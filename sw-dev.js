@@ -1,12 +1,12 @@
-// Service Worker for App - Development Version
-const VERSION = '0.0.1-dev';
+// Service Worker for TONEBENCH - Development Version
+const VERSION = '0.1.0-dev';
 importScripts(`/sw-core.js?v=${VERSION}`);
 
 const cacheConfig = CacheConfig.create(VERSION);
 const CACHE_VERSION = cacheConfig.version;
 const CACHE_NAMES = cacheConfig;
 const CACHE_PREFIX = cacheConfig.prefix;
-const LOG_PREFIX = `[App ${CACHE_VERSION} - Dev]`;
+const LOG_PREFIX = `[TONEBENCH ${CACHE_VERSION} - Dev]`;
 
 const coreResources = CacheConfig.getCoreResources();
 const staticAssets = CacheConfig.getStaticAssets();

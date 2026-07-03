@@ -1,6 +1,7 @@
 // singleton class to manage the user's data
 
 import { v4WithTimestamp } from '/src/uuid.js';
+import type { SynthParams } from '/src/engine/tonebenchEngine.js';
 
 /**
  * Minimum shape of a record. Apps consuming this template are expected to
@@ -10,6 +11,24 @@ import { v4WithTimestamp } from '/src/uuid.js';
 export interface DataRecord {
   id: string;
   [key: string]: unknown;
+}
+
+/**
+ * TONEBENCH domain typing, declared here (not inside the DataStore class)
+ * per CLAUDE.md: DataStore's *implementation* stays domain-agnostic — no
+ * SoundSet-specific methods, no generic type param — but call sites need a
+ * shared shape to hand to `addItem`/`updateItem`/`getItemById`, so it lives
+ * next to the store rather than duplicated across components.
+ */
+export interface SoundSetPreset {
+  id: string;
+  name: string;
+  params: SynthParams;
+}
+
+export interface SoundSet extends DataRecord {
+  name: string;
+  presets: SoundSetPreset[];
 }
 
 export type ChangeType = 'init' | 'add' | 'update' | 'delete';
@@ -53,7 +72,7 @@ class DataStore extends EventTarget {
     } catch (error) {
       console.warn('[DataStore] Failed to parse stored JSON, resetting items.', error);
       try {
-        window.localStorage.setItem('items', '[]');
+        window.localStorage.setItem('soundSets', '[]');
       } catch (storageError) {
         console.warn('[DataStore] Failed to reset stored items.', storageError);
       }
@@ -62,10 +81,10 @@ class DataStore extends EventTarget {
   }
 
   async init(): Promise<void> {
-    let savedItemsJson = window.localStorage.getItem('items');
+    let savedItemsJson = window.localStorage.getItem('soundSets');
     if (!savedItemsJson) {
       savedItemsJson = '[]';
-      window.localStorage.setItem('items', savedItemsJson);
+      window.localStorage.setItem('soundSets', savedItemsJson);
     }
     this.#items = this.#loadRecordsFromJson(savedItemsJson);
     this.#reindex();
@@ -86,7 +105,7 @@ class DataStore extends EventTarget {
   }
 
   #saveItems(): void {
-    window.localStorage.setItem('items', JSON.stringify(this.#items));
+    window.localStorage.setItem('soundSets', JSON.stringify(this.#items));
   }
 
   #emitChangeEvent(

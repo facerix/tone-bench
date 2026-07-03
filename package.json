@@ -1,7 +1,7 @@
 {
-  "name": "facerix-template",
-  "version": "0.0.1",
-  "description": "Template for Facerix Progressive Web Apps",
+  "name": "tone-bench",
+  "version": "0.1.0",
+  "description": "Procedural SFX synthesis tool — a rack-style Web Audio API sound designer with WAV export",
   "main": "index.html",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "concurrently -k -n ts,assets,serve -c blue,magenta,green \"npm:dev:ts\" \"npm:dev:assets\" \"npm:dev:serve\"",
     "dev:ts": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "dev:assets": "chokidar \"*.html\" \"main.css\" \"manifest.json\" \"*.svg\" \"*.ico\" \"*.png\" \"sw*.js\" \"icons/**\" \"images/**\" -c \"node scripts/copy-assets.mjs\" --initial",
-    "dev:serve": "live-server dist --no-browser --port=8080",
+    "dev:serve": "live-server dist --no-browser --port=8082",
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json",
     "test": "pnpm run typecheck && node --test \"tests/**/*.test.ts\"",

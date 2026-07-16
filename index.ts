@@ -56,6 +56,8 @@ let currentParams: SynthParams = { ...DEFAULT_PARAMS };
 const rack = document.getElementById('rack');
 const scopePanel = document.querySelector('oscilloscope-panel');
 const codeOutPanel = document.querySelector('code-out-panel');
+const codeOutDialog = document.getElementById('codeOutDialog') as HTMLDialogElement | null;
+const codeOutCloseBtn = document.getElementById('codeOutCloseBtn');
 const sourcePanel = document.querySelector('source-panel');
 const envelopePanel = document.querySelector('envelope-panel');
 const filterPanel = document.querySelector('filter-panel');
@@ -64,11 +66,6 @@ const presetRow = document.querySelector('preset-row');
 const mutateBtn = document.getElementById('mutateBtn');
 const audioLed = document.getElementById('audioLed');
 const audioStatus = document.getElementById('audioStatus');
-
-codeOutPanel?.addEventListener('code-panel-toggle', e => {
-  const { expanded } = (e as CustomEvent<{ expanded: boolean }>).detail;
-  document.querySelector('.top-grid')?.classList.toggle('code-expanded', expanded);
-});
 
 function syncAllPanels(): void {
   if (sourcePanel) sourcePanel.params = currentParams;
@@ -147,6 +144,15 @@ presetRow?.addEventListener('preset-select', e => {
 
 scopePanel?.addEventListener('trigger-request', () => trigger());
 scopePanel?.addEventListener('export-request', () => void exportWav());
+scopePanel?.addEventListener('code-out-request', () => {
+  if (!codeOutDialog) return;
+  if (!codeOutDialog.open) codeOutDialog.showModal();
+});
+
+codeOutCloseBtn?.addEventListener('click', () => codeOutDialog?.close());
+codeOutDialog?.addEventListener('click', event => {
+  if (event.target === codeOutDialog) codeOutDialog.close();
+});
 
 mutateBtn?.addEventListener('click', () => {
   currentParams = mutate(currentParams);

@@ -36,8 +36,7 @@ const CSS = `
     gap: 6px;
     align-items: center;
   }
-  .copy-btn,
-  .toggle-btn {
+  .copy-btn {
     font-family: var(--font-display);
     font-size: 10px;
     letter-spacing: 0.08em;
@@ -49,38 +48,13 @@ const CSS = `
     cursor: pointer;
     text-transform: uppercase;
   }
-  .copy-btn:hover,
-  .toggle-btn:hover {
+  .copy-btn:hover {
     color: var(--amber);
     border-color: var(--amber-dim);
   }
   .copy-btn.copied {
     color: var(--green);
     border-color: var(--green);
-  }
-  .collapsed-summary {
-    flex: 1;
-    display: grid;
-    align-content: center;
-    gap: 10px;
-    min-height: 170px;
-    padding: 12px 14px;
-    background: #0d0b08;
-    border: 1px solid var(--panel-line);
-    border-radius: 3px;
-    color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.6;
-  }
-  .collapsed-summary strong {
-    color: var(--text);
-    font-family: var(--font-display);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .collapsed-summary span {
-    display: block;
   }
 
   .code-scroll {
@@ -92,16 +66,10 @@ const CSS = `
     line-height: 1.6;
     color: #cbd6c9;
     overflow: auto;
-    max-height: 340px;
     flex: 1;
+    min-height: min(62vh, 520px);
     min-width: 0;
     white-space: pre;
-  }
-  :host(:not([expanded])) .code-scroll {
-    display: none;
-  }
-  :host([expanded]) .collapsed-summary {
-    display: none;
   }
   .code-scroll .kw {
     color: #ff9d6c;
@@ -151,10 +119,8 @@ class CodeOutPanel extends HTMLElement {
   #params: SynthParams | null = null;
   #codeScroll: HTMLDivElement | null = null;
   #copyBtn: HTMLButtonElement | null = null;
-  #toggleBtn: HTMLButtonElement | null = null;
   #snippetText = '';
   #copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
-  #expanded = false;
 
   constructor() {
     super();
@@ -176,8 +142,6 @@ class CodeOutPanel extends HTMLElement {
 
     this.#copyBtn = h('button', { type: 'button', className: 'copy-btn', innerText: 'COPY' });
     this.#copyBtn.addEventListener('click', () => void this.#copy());
-    this.#toggleBtn = h('button', { type: 'button', className: 'toggle-btn', innerText: 'EXPAND' });
-    this.#toggleBtn.addEventListener('click', () => this.#toggleExpanded());
 
     this.#codeScroll = h('div', { className: 'code-scroll' });
 
@@ -185,19 +149,10 @@ class CodeOutPanel extends HTMLElement {
       h('style', { innerHTML: CSS }),
       h('div', { className: 'panel' }, [
         ...panelScrews(),
-        moduleLabel('CODE OUT', [
-          h('span', { className: 'panel-actions' }, [this.#copyBtn, this.#toggleBtn]),
-        ]),
-        h('div', { className: 'collapsed-summary' }, [
-          h('strong', { innerText: 'Export-ready source' }),
-          h('span', {
-            innerText: 'Copy the dependency-free engine and current params, or expand to inspect.',
-          }),
-        ]),
+        moduleLabel('CODE OUT', [h('span', { className: 'panel-actions' }, [this.#copyBtn])]),
         this.#codeScroll,
       ])
     );
-    this.#syncExpanded();
   }
 
   async #refresh(): Promise<void> {
@@ -242,23 +197,6 @@ class CodeOutPanel extends HTMLElement {
     } finally {
       document.body.removeChild(ta);
     }
-  }
-
-  #toggleExpanded(): void {
-    this.#expanded = !this.#expanded;
-    this.#syncExpanded();
-    this.dispatchEvent(
-      new CustomEvent('code-panel-toggle', {
-        detail: { expanded: this.#expanded },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
-  #syncExpanded(): void {
-    this.toggleAttribute('expanded', this.#expanded);
-    if (this.#toggleBtn) this.#toggleBtn.textContent = this.#expanded ? 'COLLAPSE' : 'EXPAND';
   }
 
   set params(p: SynthParams) {

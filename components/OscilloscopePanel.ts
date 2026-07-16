@@ -11,6 +11,7 @@
  * Set `analyser` once the AudioContext exists. Emits:
  *   'trigger-request' — user pressed the trigger pad
  *   'export-request'  — user pressed "Export WAV"
+ *   'code-out-request' — user pressed "Code Out"
  */
 
 import { h } from '/src/domUtils.js';
@@ -46,6 +47,7 @@ const CSS = `
 
   .trigger-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 12px;
     align-items: stretch;
@@ -81,6 +83,7 @@ const CSS = `
       inset 0 0 20px rgba(255, 176, 32, 0.25);
   }
   .btn-secondary {
+    flex: 0 0 auto;
     font-family: var(--font-display);
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -96,6 +99,12 @@ const CSS = `
   .btn-secondary:hover {
     color: var(--text);
     border-color: var(--amber-dim);
+  }
+  @media (max-width: 560px) {
+    .trigger-pad,
+    .btn-secondary {
+      flex: 1 1 100%;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -160,6 +169,15 @@ class OscilloscopePanel extends HTMLElement {
       this.dispatchEvent(new CustomEvent('export-request', { bubbles: true, composed: true }));
     });
 
+    const codeOutBtn = h('button', {
+      type: 'button',
+      className: 'btn-secondary',
+      innerText: 'CODE OUT',
+    });
+    codeOutBtn.addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('code-out-request', { bubbles: true, composed: true }));
+    });
+
     root.replaceChildren(
       h('style', { innerHTML: CSS }),
       h('div', { className: 'panel' }, [
@@ -169,7 +187,7 @@ class OscilloscopePanel extends HTMLElement {
           this.#canvas,
           h('div', { className: 'scope-overlay' }),
         ]),
-        h('div', { className: 'trigger-row' }, [this.#triggerPad, exportBtn]),
+        h('div', { className: 'trigger-row' }, [this.#triggerPad, exportBtn, codeOutBtn]),
       ])
     );
   }

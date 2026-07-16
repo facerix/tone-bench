@@ -51,16 +51,15 @@
           </div>
         </div>
 
-        <div class="panel">
-          <span class="screw screw-tl"></span><span class="screw screw-tr"></span
-          ><span class="screw screw-bl"></span><span class="screw screw-br"></span>
-          <div class="module-label"><span class="dot"></span>PRESETS</div>
-          <preset-row></preset-row>
-        </div>
+        <oscilloscope-panel id="scope"></oscilloscope-panel>
 
         <div class="top-grid">
-          <oscilloscope-panel id="scope"></oscilloscope-panel>
-          <code-out-panel id="codeOut"></code-out-panel>
+          <div class="panel">
+            <span class="screw screw-tl"></span><span class="screw screw-tr"></span
+            ><span class="screw screw-bl"></span><span class="screw screw-br"></span>
+            <div class="module-label"><span class="dot"></span>PRESETS</div>
+            <preset-row></preset-row>
+          </div>
         </div>
 
         <div class="controls-grid">
@@ -83,6 +82,12 @@
     </main>
 
     <update-notification></update-notification>
+    <dialog class="code-modal" id="codeOutDialog" aria-label="Code out">
+      <div class="code-modal-shell">
+        <button class="code-modal-close" id="codeOutCloseBtn" type="button">CLOSE</button>
+        <code-out-panel id="codeOut"></code-out-panel>
+      </div>
+    </dialog>
   </body>
   <script src="/index.js" type="module"></script>
 </html>

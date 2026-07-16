@@ -406,21 +406,7 @@ dialog::backdrop {
 }
 
 .top-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
-  gap: 14px;
-  align-items: stretch;
-}
-.top-grid.code-expanded {
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-}
-@media (max-width: 860px) {
-  .top-grid {
-    grid-template-columns: 1fr;
-  }
-  .top-grid.code-expanded {
-    grid-template-columns: 1fr;
-  }
+  display: block;
 }
 
 .controls-grid {
@@ -491,6 +477,37 @@ code-out-panel {
 }
 code-out-panel {
   height: 100%;
+}
+
+.code-modal {
+  width: min(1040px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+}
+.code-modal::backdrop {
+  background: rgba(12, 10, 7, 0.76);
+  backdrop-filter: blur(3px);
+}
+.code-modal-shell {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.code-modal-close {
+  justify-self: end;
+  padding: 5px 9px;
+  color: var(--text-muted);
+  background: var(--panel);
+}
+.code-modal-close:hover,
+.code-modal-close:focus-visible {
+  color: var(--amber);
+}
+.code-modal code-out-panel {
+  height: min(78vh, 720px);
 }
 
 @media (max-width: 575px) {

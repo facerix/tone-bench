@@ -15,7 +15,9 @@
 import { h } from '/src/domUtils.js';
 import { highlightJs } from '/components/codeHighlight.js';
 import { panelScrews, moduleLabel, PANEL_CHROME_CSS } from '/components/styles/panelChrome.js';
+import { buildSoundSnippet, buildSoundSetSnippet } from '/src/soundSetCode.js';
 import type { SynthParams } from '/src/engine/tonebenchEngine.js';
+import type { SoundSet } from '/src/DataStore.js';
 
 const CSS = `
   ${PANEL_CHROME_CSS}
@@ -57,6 +59,33 @@ const CSS = `
     border-color: var(--green);
   }
 
+  .code-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+  .tab-btn {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--panel-line);
+    color: var(--text-muted);
+    border-radius: 3px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    color: var(--amber);
+    border-color: var(--amber-dim);
+    background: var(--panel-raised);
+  }
+  .tab-btn:hover:not(.active) {
+    color: var(--text);
+    border-color: var(--amber-dim);
+  }
+
   .code-scroll {
     background: #0d0b08;
     border: 1px solid var(--panel-line);
@@ -91,23 +120,6 @@ const CSS = `
 
 const ENGINE_SOURCE_URL = '/src/engine/tonebenchEngine.js';
 
-function buildSnippet(engineSource: string, params: SynthParams): string {
-  const paramsJson = JSON.stringify(params, null, 2);
-  return [
-    '// 1. Paste this file into your project as tonebenchEngine.js — it is',
-    '//    dependency-free and safe to drop into any Web Audio project as-is.',
-    engineSource.trimEnd(),
-    '',
-    '// 2. This object is your current TONEBENCH settings.',
-    `const params = ${paramsJson};`,
-    '',
-    '// 3. Play it through any AudioContext.',
-    "import { playSound } from './tonebenchEngine.js';",
-    'const audioCtx = new AudioContext();',
-    'playSound(audioCtx, params);',
-  ].join('\n');
-}
-
 let engineSourceCache: Promise<string> | null = null;
 
 function fetchEngineSource(): Promise<string> {
@@ -115,10 +127,16 @@ function fetchEngineSource(): Promise<string> {
   return engineSourceCache;
 }
 
+type CodeTab = 'sound' | 'set';
+
 class CodeOutPanel extends HTMLElement {
   #params: SynthParams | null = null;
+  #soundSet: SoundSet | null = null;
+  #activeTab: CodeTab = 'sound';
   #codeScroll: HTMLDivElement | null = null;
   #copyBtn: HTMLButtonElement | null = null;
+  #tabSoundBtn: HTMLButtonElement | null = null;
+  #tabSetBtn: HTMLButtonElement | null = null;
   #snippetText = '';
   #copyResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -143,6 +161,20 @@ class CodeOutPanel extends HTMLElement {
     this.#copyBtn = h('button', { type: 'button', className: 'copy-btn', innerText: 'COPY' });
     this.#copyBtn.addEventListener('click', () => void this.#copy());
 
+    this.#tabSoundBtn = h('button', {
+      type: 'button',
+      className: 'tab-btn active',
+      innerText: 'THIS SOUND',
+    });
+    this.#tabSoundBtn.addEventListener('click', () => this.#setActiveTab('sound'));
+
+    this.#tabSetBtn = h('button', {
+      type: 'button',
+      className: 'tab-btn',
+      innerText: 'THIS SET',
+    });
+    this.#tabSetBtn.addEventListener('click', () => this.#setActiveTab('set'));
+
     this.#codeScroll = h('div', { className: 'code-scroll' });
 
     root.replaceChildren(
@@ -150,15 +182,32 @@ class CodeOutPanel extends HTMLElement {
       h('div', { className: 'panel' }, [
         ...panelScrews(),
         moduleLabel('CODE OUT', [h('span', { className: 'panel-actions' }, [this.#copyBtn])]),
+        h('div', { className: 'code-tabs' }, [this.#tabSoundBtn, this.#tabSetBtn]),
         this.#codeScroll,
       ])
     );
   }
 
+  #setActiveTab(tab: CodeTab): void {
+    if (this.#activeTab === tab) return;
+    this.#activeTab = tab;
+    this.#tabSoundBtn?.classList.toggle('active', tab === 'sound');
+    this.#tabSetBtn?.classList.toggle('active', tab === 'set');
+    void this.#refresh();
+  }
+
   async #refresh(): Promise<void> {
-    if (!this.#params || !this.#codeScroll) return;
+    if (!this.#codeScroll) return;
     const engineSource = await fetchEngineSource();
-    this.#snippetText = buildSnippet(engineSource, this.#params);
+
+    if (this.#activeTab === 'set') {
+      this.#snippetText = this.#soundSet
+        ? buildSoundSetSnippet(engineSource, this.#soundSet)
+        : '// No active sound set.';
+    } else {
+      if (!this.#params) return;
+      this.#snippetText = buildSoundSnippet(engineSource, this.#params);
+    }
     this.#codeScroll.innerHTML = highlightJs(this.#snippetText);
   }
 
@@ -201,11 +250,20 @@ class CodeOutPanel extends HTMLElement {
 
   set params(p: SynthParams) {
     this.#params = p;
-    void this.#refresh();
+    if (this.#activeTab === 'sound') void this.#refresh();
   }
 
   get params(): SynthParams | null {
     return this.#params;
+  }
+
+  set soundSet(s: SoundSet | null) {
+    this.#soundSet = s;
+    if (this.#activeTab === 'set') void this.#refresh();
+  }
+
+  get soundSet(): SoundSet | null {
+    return this.#soundSet;
   }
 }
 

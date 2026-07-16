@@ -19,8 +19,14 @@ export interface DataRecord {
  * SoundSet-specific methods, no generic type param — but call sites need a
  * shared shape to hand to `addItem`/`updateItem`/`getItemById`, so it lives
  * next to the store rather than duplicated across components.
+ *
+ * A NamedSound is a name plus the SynthParams that make up a sound — the
+ * unit stored inside a SoundSet. This is deliberately the same shape
+ * whether the sound originated as a hand-tweaked user sound or one of the
+ * built-in presets (see src/presets.ts): there is no separate "preset"
+ * type, just a SoundSet with `readOnly: true`.
  */
-export interface SoundSetPreset {
+export interface NamedSound {
   id: string;
   name: string;
   params: SynthParams;
@@ -28,7 +34,9 @@ export interface SoundSetPreset {
 
 export interface SoundSet extends DataRecord {
   name: string;
-  presets: SoundSetPreset[];
+  sounds: NamedSound[];
+  /** True only for the hardcoded built-in Presets set (src/presets.ts). */
+  readOnly?: boolean;
 }
 
 export type ChangeType = 'init' | 'add' | 'update' | 'delete';

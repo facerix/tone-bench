@@ -1,12 +1,15 @@
-# Facerix App Template
+# TONEBENCH
 
-Progressive Web App (PWA) template for building offline-first web applications. Built with vanilla TypeScript, Web Components, and Service Workers — compiled with `tsc`, no bundler.
+Procedural SFX synthesis tool: a rack-style Web Audio API sound designer. Shape "hit" sounds with oscillator/noise source, ADSR envelope, filter, distortion, delay, and reverb — preview live with an oscilloscope, export as WAV or portable code.
+
+Built with vanilla TypeScript, Web Components, and Service Workers — compiled with `tsc`, no bundler. Runs offline-first with full PWA support.
 
 ## Architecture
 
 - **No frameworks, no bundler** - Pure vanilla TypeScript compiled with `tsc` to ES modules
-- **Web Components** - Custom elements in `/components/` with Shadow DOM
-- **Data Store** - Singleton `DataStore` (EventTarget) manages all data in localStorage
+- **Vendored synthesis engine** - `src/engine/tonebenchEngine.ts` is self-contained (zero app-specific imports), can be lifted out as-is for reuse elsewhere
+- **Web Components** - Custom elements in `/components/` with Shadow DOM for rack UI panels
+- **Sound sets** - Persisted via `DataStore` (localStorage): create/save/load/export user sound collections
 - **DOM Creation** - Use `h()` helper from `src/domUtils.ts` for all DOM manipulation
 - **Service Workers** - Offline-first caching with automatic update notifications (authored in plain JS, not compiled)
 
@@ -48,14 +51,15 @@ Service workers (`sw.js`, `sw-dev.js`, `sw-core.js`) are **not** compiled by `ts
 - **const > let** - Prefer `const`, avoid `var`
 - **Arrow functions** - For callbacks
 - **async/await** - For promises
+- **Test-driven development** - Write tests that can fail before implementing behavior, especially for the synthesis engine's pure logic (frequency mapping, duration math, WAV byte encoding, preset mutations)
 
 ## Project Structure
 
 ```
 /
-├── index.html/.ts             # Main entry point
-├── about.html/.ts             # About page
-├── main.css                   # Global styles
+├── index.html/.ts             # Main rack UI entry point
+├── about.html/.ts             # About/help page
+├── main.css                   # Global styles (rack layout, light/dark theme, fonts)
 ├── manifest.json              # PWA manifest
 ├── sw.js                      # Production service worker (hand-authored JS)
 ├── sw-dev.js                  # Development service worker (hand-authored JS)
@@ -63,17 +67,32 @@ Service workers (`sw.js`, `sw-dev.js`, `sw-core.js`) are **not** compiled by `ts
 ├── tsconfig.json              # tsc config for src/components/entries
 ├── tsconfig.tests.json        # type-check-only config for tests
 ├── components/                # Web Components (Custom Elements)
-│   ├── ConfirmationModal.ts
-│   └── UpdateNotification.ts
+│   ├── RangeField.ts          # Reusable labeled slider input
+│   ├── WaveToggle.ts          # Wave type selector (sine/square/triangle/noise)
+│   ├── SourcePanel.ts         # Oscillator/noise source controls
+│   ├── EnvelopePanel.ts       # ADSR envelope duration controls
+│   ├── FilterPanel.ts         # Filter type/cutoff/Q controls
+│   ├── SpacePanel.ts          # Distortion/delay/reverb controls
+│   ├── OscilloscopePanel.ts   # Waveform display + trigger/export buttons
+│   ├── CodeOutPanel.ts        # Live code snippet (fetches real engine source)
+│   ├── PresetRow.ts           # Built-in preset buttons
+│   ├── UpdateNotification.ts  # PWA update prompt
+│   └── styles/
+│       └── panelChrome.ts     # Shared shadow-DOM styles for panels
 ├── src/                       # Core utilities
-│   ├── DataStore.ts           # Singleton data store (localStorage)
-│   ├── ServiceWorkerManager.ts # Service worker lifecycle
-│   ├── domUtils.ts            # DOM helper functions (h() function)
+│   ├── engine/
+│   │   └── tonebenchEngine.ts # Vendored synthesis library (self-contained, reusable)
+│   ├── presets.ts             # 8 built-in presets (LASER, EXPLOSION, JUMP, COIN, HIT, POWERUP, UI CLICK, ALARM)
+│   ├── DataStore.ts           # Singleton data store (localStorage), includes SoundSet/SoundSetPreset types
+│   ├── ServiceWorkerManager.ts # Service worker lifecycle + update notifications
+│   ├── domUtils.ts            # DOM helper functions (h() function, isDevelopmentMode())
 │   ├── uuid.ts                # Thin wrapper over crypto.randomUUID()
-│   └── globals.d.ts           # Ambient types for window-scoped state + custom events
+│   └── globals.d.ts           # Ambient types (window.serviceWorkerManager, custom window events)
 ├── scripts/
 │   └── copy-assets.mjs        # Copies static files into dist/
 ├── tests/                     # node --test suites (TypeScript)
+│   ├── engine.test.ts         # Synthesis engine tests
+│   └── presets.test.ts        # Preset tests
 ├── images/                    # SVG/PNG assets
 ├── icons/                     # PWA icons (referenced from manifest.json)
 ├── favicon.svg                # Browser favicon (scalable)
@@ -84,10 +103,28 @@ Service workers (`sw.js`, `sw-dev.js`, `sw-core.js`) are **not** compiled by `ts
 
 (`dist/` is git-ignored; created by `pnpm build` or `pnpm dev`.)
 
-## Getting Started
+## Key Concepts
 
-See [USING_THIS_TEMPLATE.md](USING_THIS_TEMPLATE.md) for the full step-by-step setup guide.
+### Sounds as Data
+A "sound" in TONEBENCH is a flat, fully-serializable `SynthParams` object: wave type, start/end frequency, ADSR fields, filter/distortion/delay/reverb settings, and volume. The same object always produces the same sound — no hidden state. This makes presets, mutation, and JSON export trivial.
+
+### Presets & Sound Sets
+- **Built-in presets** (`src/presets.ts`): 8 fixed presets (LASER, EXPLOSION, JUMP, COIN, HIT, POWERUP, UI CLICK, ALARM)
+- **Sound sets** (via `DataStore`): User-created collections of presets, persisted to localStorage, can be exported as portable bundles
+
+### ADSR Is Time-Bounded
+TONEBENCH synthesizes one-shot "hits," not held notes. `duration = attack + decay + sustainTime + release` — `sustainTime` is a fixed span, not "however long the key is held."
+
+### Frequency Sliders Are Logarithmic
+Frequency and cutoff sliders use logarithmic mapping via `sliderToFreq` / `freqToSlider`, not linear interpolation. The slider midpoint is not the frequency midpoint.
+
+### The Engine Is Reusable
+`src/engine/tonebenchEngine.ts` is intentionally self-contained: zero imports from `DataStore`, `domUtils`, or `/components/`, touches only `BaseAudioContext` and standard JS/DOM globals. It's designed to be lifted out and dropped into unrelated projects as-is.
+
+## Architecture Deep Dive
+
+See [CLAUDE.md](CLAUDE.md) for the full domain writeup, [AGENTS.md](AGENTS.md) for agent guidance, and [SESSION_NOTES.md](.claude/SESSION_NOTES.md) for project history and design decisions.
 
 ## Credits
 
-Template created by [Rylee Corradini](https://www.facerix.com/about).
+Created by [Rylee Corradini](https://github.com/facerix).

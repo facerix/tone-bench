@@ -1,14 +1,23 @@
 import { serviceWorkerManager } from '/src/ServiceWorkerManager.js';
 import { h } from '/src/domUtils.js';
+import dataStore from '/src/DataStore.js';
 import '/components/UpdateNotification.js';
-import '/components/PresetRow.js';
 import '/components/OscilloscopePanel.js';
 import '/components/CodeOutPanel.js';
 import '/components/SourcePanel.js';
 import '/components/EnvelopePanel.js';
 import '/components/FilterPanel.js';
 import '/components/SpacePanel.js';
+import '/components/SoundSetDrawer.js';
 import { playSound, renderToWav, mutate, type SynthParams } from '/src/engine/tonebenchEngine.js';
+import type { SoundSet } from '/src/DataStore.js';
+
+// DataStore dispatches its 'init' change event via setTimeout(0) once the
+// stored sound sets are loaded — call init() as early as possible so
+// <sound-set-drawer>'s connectedCallback listener (attached when the
+// element is parsed, before this module even finishes evaluating) is
+// already in place to catch it.
+void dataStore.init();
 
 const whenLoaded = customElements.whenDefined('update-notification');
 
@@ -26,8 +35,8 @@ whenLoaded.then(async () => {
 // ---------------------------------------------------------------------------
 // TONEBENCH rack — current sound state + AudioContext orchestration.
 // This is transient in-memory editing state, distinct from persisted sound
-// sets (which go through DataStore); see CLAUDE.md's "Presets vs. sound
-// sets" section.
+// sets (which go through DataStore); see CLAUDE.md's "Two modes: freeform
+// editing vs. a tracked Sound Set" section.
 // ---------------------------------------------------------------------------
 
 const DEFAULT_PARAMS: SynthParams = {
@@ -62,7 +71,10 @@ const sourcePanel = document.querySelector('source-panel');
 const envelopePanel = document.querySelector('envelope-panel');
 const filterPanel = document.querySelector('filter-panel');
 const spacePanel = document.querySelector('space-panel');
-const presetRow = document.querySelector('preset-row');
+const soundSetDrawer = document.querySelector('sound-set-drawer');
+const soundSetsDialog = document.getElementById('soundSetsDialog') as HTMLDialogElement | null;
+const soundSetsBtn = document.getElementById('soundSetsBtn');
+const soundSetsCloseBtn = document.getElementById('soundSetsCloseBtn');
 const mutateBtn = document.getElementById('mutateBtn');
 const audioLed = document.getElementById('audioLed');
 const audioStatus = document.getElementById('audioStatus');
@@ -73,6 +85,7 @@ function syncAllPanels(): void {
   if (filterPanel) filterPanel.params = currentParams;
   if (spacePanel) spacePanel.params = currentParams;
   if (codeOutPanel) codeOutPanel.params = currentParams;
+  if (soundSetDrawer) soundSetDrawer.params = currentParams;
 }
 
 // --- AudioContext, created lazily on first trigger (browsers require a
@@ -113,6 +126,14 @@ function trigger(): void {
   if (analyser) playSound(audioCtx, currentParams, audioCtx.currentTime, analyser);
 }
 
+// Preview a sound-set entry without disturbing the loaded editor state —
+// distinct from trigger(), which always plays currentParams.
+function previewParams(p: SynthParams): void {
+  const audioCtx = ensureContext();
+  if (audioCtx.state === 'suspended') void audioCtx.resume();
+  if (analyser) playSound(audioCtx, p, audioCtx.currentTime, analyser);
+}
+
 async function exportWav(): Promise<void> {
   ensureContext();
   const wavData = await renderToWav(currentParams);
@@ -132,14 +153,8 @@ rack?.addEventListener('params-change', e => {
     .detail;
   currentParams = { ...currentParams, ...patch };
   if (codeOutPanel) codeOutPanel.params = currentParams;
+  if (soundSetDrawer) soundSetDrawer.params = currentParams;
   if (commit) trigger();
-});
-
-presetRow?.addEventListener('preset-select', e => {
-  const { params } = (e as CustomEvent<{ name: string; params: SynthParams }>).detail;
-  currentParams = { ...params };
-  syncAllPanels();
-  trigger();
 });
 
 scopePanel?.addEventListener('trigger-request', () => trigger());
@@ -152,6 +167,30 @@ scopePanel?.addEventListener('code-out-request', () => {
 codeOutCloseBtn?.addEventListener('click', () => codeOutDialog?.close());
 codeOutDialog?.addEventListener('click', event => {
   if (event.target === codeOutDialog) codeOutDialog.close();
+});
+
+soundSetsBtn?.addEventListener('click', () => {
+  if (!soundSetsDialog) return;
+  if (!soundSetsDialog.open) soundSetsDialog.showModal();
+});
+soundSetsCloseBtn?.addEventListener('click', () => soundSetsDialog?.close());
+soundSetsDialog?.addEventListener('click', event => {
+  if (event.target === soundSetsDialog) soundSetsDialog.close();
+});
+
+soundSetDrawer?.addEventListener('sound-load', e => {
+  const { params } = (e as CustomEvent<{ params: SynthParams }>).detail;
+  currentParams = { ...params };
+  syncAllPanels();
+  trigger();
+});
+soundSetDrawer?.addEventListener('sound-preview', e => {
+  const { params } = (e as CustomEvent<{ params: SynthParams }>).detail;
+  previewParams(params);
+});
+soundSetDrawer?.addEventListener('active-soundset-change', e => {
+  const { soundSet } = (e as CustomEvent<{ soundSet: SoundSet | null }>).detail;
+  if (codeOutPanel) codeOutPanel.soundSet = soundSet;
 });
 
 mutateBtn?.addEventListener('click', () => {

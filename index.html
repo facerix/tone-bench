@@ -48,19 +48,11 @@
           <div class="status">
             <div class="led" id="audioLed"></div>
             <span id="audioStatus">CONTEXT SUSPENDED</span>
+            <button type="button" id="soundSetsBtn">SOUND SETS</button>
           </div>
         </div>
 
         <oscilloscope-panel id="scope"></oscilloscope-panel>
-
-        <div class="top-grid">
-          <div class="panel">
-            <span class="screw screw-tl"></span><span class="screw screw-tr"></span
-            ><span class="screw screw-bl"></span><span class="screw screw-br"></span>
-            <div class="module-label"><span class="dot"></span>PRESETS</div>
-            <preset-row></preset-row>
-          </div>
-        </div>
 
         <div class="controls-grid">
           <source-panel></source-panel>
@@ -86,6 +78,12 @@
       <div class="code-modal-shell">
         <button class="code-modal-close" id="codeOutCloseBtn" type="button">CLOSE</button>
         <code-out-panel id="codeOut"></code-out-panel>
+      </div>
+    </dialog>
+    <dialog class="soundsets-modal" id="soundSetsDialog" aria-label="Sound sets">
+      <div class="soundsets-modal-shell">
+        <button class="soundsets-modal-close" id="soundSetsCloseBtn" type="button">CLOSE</button>
+        <sound-set-drawer></sound-set-drawer>
       </div>
     </dialog>
   </body>

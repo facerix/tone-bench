@@ -1,8 +1,142 @@
 /**
  * UpdateNotification Web Component
  * Displays a notification when a service worker update is available
- * Uses Shadow DOM with encapsulated styles
+ * Uses Shadow DOM with encapsulated styles, matching the rest of the
+ * TONEBENCH rack module theme (panel chrome + amber accent).
  */
+
+import { h } from '/src/domUtils.js';
+import { panelScrews, PANEL_CHROME_CSS } from '/components/styles/panelChrome.js';
+
+const CSS = `
+  ${PANEL_CHROME_CSS}
+
+  :host {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    left: auto;
+    z-index: 1000;
+    display: none;
+    max-width: min(300px, calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 360px) {
+    :host {
+      left: max(12px, env(safe-area-inset-left, 0px));
+      right: max(12px, env(safe-area-inset-right, 0px));
+      max-width: none;
+    }
+  }
+
+  .update-notification {
+    box-sizing: border-box;
+    height: auto;
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.5),
+      0 0 20px var(--amber-glow);
+  }
+
+  .title {
+    font-family: var(--font-display);
+  }
+
+  .message {
+    margin: 0 0 14px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .update-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .update-actions.hidden {
+    display: none;
+  }
+
+  .btn {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--panel-raised);
+    color: var(--text);
+    border: 1px solid var(--panel-line);
+    border-radius: 3px;
+    padding: 9px 12px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--amber-dim);
+    color: var(--amber);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn.primary {
+    color: var(--bg-deep);
+    background: var(--amber);
+    border-color: var(--amber);
+  }
+
+  .btn.primary:hover:not(:disabled) {
+    color: var(--bg-deep);
+    box-shadow: 0 0 12px var(--amber-glow);
+  }
+
+  .updating-state {
+    display: none;
+  }
+
+  .updating-state.active {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .spinner {
+    flex: none;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--panel-line);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation-duration: 1.6s;
+    }
+  }
+
+  .update-status {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+`;
 
 class UpdateNotification extends HTMLElement {
   pendingWorker: ServiceWorker | null = null;
@@ -36,128 +170,35 @@ class UpdateNotification extends HTMLElement {
   render(): void {
     const root = this.shadowRoot;
     if (!root) return;
-    root.innerHTML = `
-      <style>
-        :host {
-          --update-notification-bg: linear-gradient(135deg, #7a7a7a 0%, #3a3a3a 50%, #5a5a5a 100%);
-          --update-notification-color: white;
-          --update-notification-border: transparent;
-          --update-notification-btn-bg: white;
-          --update-notification-btn-color: #5a5a5a;
-          --update-notification-btn-hover: #f0f0f0;
-        }
 
-        .update-notification {
-          position: fixed;
-          top: max(12px, env(safe-area-inset-top, 0px));
-          right: max(12px, env(safe-area-inset-right, 0px));
-          left: auto;
-          background: var(--update-notification-bg);
-          color: var(--update-notification-color);
-          padding: 15px;
-          border-radius: 8px;
-          border: 1px solid var(--update-notification-border);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-          z-index: 1000;
-          max-width: min(300px, calc(100vw - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
-          box-sizing: border-box;
-          display: none;
-        }
-
-        @media (max-width: 360px) {
-          .update-notification {
-            left: max(12px, env(safe-area-inset-left, 0px));
-            right: max(12px, env(safe-area-inset-right, 0px));
-            max-width: none;
-          }
-        }
-
-        .update-notification strong {
-          display: block;
-          margin-bottom: 8px;
-        }
-
-        .update-notification p {
-          margin: 12px 0;
-        }
-
-        .update-notification button {
-          background: var(--update-notification-btn-bg);
-          color: var(--update-notification-btn-color);
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          margin: 8px 8px 0 0;
-          cursor: pointer;
-          font-weight: bold;
-          font-size: 14px;
-          font-family: inherit;
-        }
-
-        .update-notification button:hover:not(:disabled) {
-          background: var(--update-notification-btn-hover);
-        }
-
-        .update-notification button:active:not(:disabled) {
-          transform: scale(0.98);
-        }
-
-        .update-notification button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .updating-state {
-          display: none;
-        }
-
-        .updating-state.active {
-          display: block;
-        }
-
-        .update-actions {
-          display: block;
-        }
-
-        .update-actions.hidden {
-          display: none;
-        }
-
-        .spinner {
-          display: inline-block;
-          width: 16px;
-          height: 16px;
-          border: 2px solid color-mix(in srgb, var(--update-notification-color) 30%, transparent);
-          border-top-color: var(--update-notification-color);
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-          vertical-align: middle;
-          margin-right: 8px;
-        }
-
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        .update-status {
-          font-size: 13px;
-          opacity: 0.9;
-          margin-top: 8px;
-        }
-      </style>
-      <div class="update-notification">
-        <strong class="title">Update Available!</strong>
-        <p class="message">A new version is ready.</p>
-        <div class="update-actions">
-          <button class="update-now">Update Now</button>
-          <button class="update-later">Later</button>
-        </div>
-        <div class="updating-state">
-          <div class="spinner"></div>
-          <p class="update-status">Please wait while we install the update.</p>
-        </div>
-      </div>
-    `;
+    root.replaceChildren(
+      h('style', { innerHTML: CSS }),
+      h('div', { className: 'update-notification panel' }, [
+        ...panelScrews(),
+        h('div', { className: 'module-label' }, [
+          h('span', { className: 'label-text' }, [
+            h('span', { className: 'dot' }),
+            h('span', { className: 'title', innerText: 'Update Available' }),
+          ]),
+        ]),
+        h('p', { className: 'message', innerText: 'A new version is ready.' }),
+        h('div', { className: 'update-actions' }, [
+          h('button', {
+            type: 'button',
+            className: 'btn primary update-now',
+            innerText: 'Update Now',
+          }),
+          h('button', { type: 'button', className: 'btn update-later', innerText: 'Later' }),
+        ]),
+        h('div', { className: 'updating-state' }, [
+          h('div', { className: 'spinner' }),
+          h('p', {
+            className: 'update-status',
+            innerText: 'Please wait while we install the update.',
+          }),
+        ]),
+      ])
+    );
   }
 
   setupEventListeners(): void {
